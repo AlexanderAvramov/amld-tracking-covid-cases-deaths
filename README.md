@@ -71,7 +71,7 @@ TODO
 
 You can find the **solved (in progress)** MyBinder environment here:
 
-[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/AlexanderAvramov/tracking-covid-infections-and-deaths/HEAD?labpath=setup.ipynb)
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/AlexanderAvramov/amld-tracking-covid-cases-deaths/HEAD?labpath=setup.ipynb)
 
 For more information on MyBinder, please visit:
 

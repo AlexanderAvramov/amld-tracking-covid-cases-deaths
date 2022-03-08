@@ -8,28 +8,22 @@ from vdk.api.job_input import IJobInput
 
 log = logging.getLogger(__name__)
 
-
 def run(job_input: IJobInput):
     """
-    Collect COVID-19 deaths historical data for a random sample of European countries since the start of the pandemic through
-    an API call. Ingest this data into a cloud DB table.
+    Collect COVID-19 historical data for the number of deaths per day in a randomly selected set of European countries
+    since the start of the pandemic through an API call. Ingest this data into a table in a cloud Trino database.
     """
 
     log.info(f"Starting job step {__name__}")
 
-    # If ingesting for the first time, run these cells, otherwise comment them out
-    #props = job_input.get_all_properties()
-    #props = {}
-    #job_input.set_all_properties(props)
-
-    # Create/retrieve the data job property storing latest ingested date for covid_cases_usa_daily table.
+    # Create/retrieve the data job property storing latest ingested date for covid_deaths_europe_daily table.
     # If the property does not exist, set it to "2020-01-01" (around the start of the pandemic).
     props = job_input.get_all_properties()
-    if "last_date_covid" in props:
+    if "last_date_covid_deaths" in props:
         pass
     else:
-        props["last_date_covid"] = "2020-01-01"
-    log.info(f"The data job date is {props}")
+        props["last_date_covid_deaths"] = "2020-01-01"
+    log.info(f"The covid_deaths_europe_daily last previous date is {props}")
 
     # Initialize URL
     url = "https://covid-api.mmediagroup.fr/v1/history?continent=Europe&status=deaths"
@@ -42,12 +36,12 @@ def run(job_input: IJobInput):
     r = response.json()
 
     # Get the random sample of countries from cases data set
-    ctry_list = ['Greece','Italy','Norway','Romania','Austria','Portugal','Poland']
+    ctry_list = ['Greece', 'Italy', 'Norway', 'Romania', 'Austria', 'Portugal', 'Poland']
     log.info(ctry_list)
 
     # Create an empty Data Frame to be populated
     df_deaths = pd.DataFrame(
-        columns = [
+        columns=[
             'obs_date', 'number_of_deaths'
         ]
     )
@@ -57,11 +51,11 @@ def run(job_input: IJobInput):
         dates_deaths = r[ctry_list[i]]['All']['dates']
         
         dates_deaths_dict = {
-        'obs_date': [],
-        'number_of_deaths':[]
+            'obs_date': [],
+            'number_of_deaths': []
         }
         
-        for k,v in dates_deaths.items():
+        for k, v in dates_deaths.items():
             dates_deaths_dict['obs_date'].append(k)
             dates_deaths_dict['number_of_deaths'].append(v)
         
@@ -70,12 +64,13 @@ def run(job_input: IJobInput):
         
         df_deaths = pd.concat(
             [df, df_deaths],
-            axis = 0)
+            axis=0)
 
-    # Keep only the dates which are not present in the table already (based on last_date_covid property)
-    df_deaths = df_deaths[df_deaths['obs_date'] > props["last_date_covid"]]
+    # Keep only the dates which are not present in the table already (based on last_date_covid_deaths property)
+    df_deaths = df_deaths[df_deaths['obs_date'] > props["last_date_covid_deaths"]]
 
-    log.info(df_deaths.head())
+    log.info(f"The total number of rows to be ingested to covid_deaths_europe_daily is: {len(df_deaths)}.")
+    log.info(df_deaths)
 
     # Ingest the data to the cloud DB
     if len(df_deaths) > 0:
@@ -86,7 +81,7 @@ def run(job_input: IJobInput):
         )
 
         # Reset the last_date property value to the latest date in the covid source db table
-        props["last_date_covid"] = max(df_deaths['obs_date'])
+        props["last_date_covid_deaths"] = max(df_deaths['obs_date'])
         job_input.set_all_properties(props)
 
     log.info(f"Success! {len(df_deaths)} rows were inserted in table covid_deaths_europe_daily.")

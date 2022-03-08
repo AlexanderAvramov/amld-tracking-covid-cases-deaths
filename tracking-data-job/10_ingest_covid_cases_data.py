@@ -23,7 +23,7 @@ def run(job_input: IJobInput):
         pass
     else:
         props["last_date_covid_cases"] = "2020-01-01"
-    log.info(f"Beginning of Script: The covid_cases_europe_daily last previous date is {props['last_date_covid_cases']}")
+    log.info(f"Beginning of {__name__}: The covid_cases_europe_daily last previous date is {props['last_date_covid_cases']}")
 
     # Initialize URL
     url = "https://covid-api.mmediagroup.fr/v1/history?continent=Europe&status=confirmed"
@@ -36,12 +36,21 @@ def run(job_input: IJobInput):
 
     # Create a list of countries to iterate over
     r = response.json()
-    ctry_list = ['Greece', 'Italy', 'Norway', 'Romania', 'Austria', 'Portugal', 'Poland']
+    ctry_list = [
+        'Greece',
+        'Italy',
+        'Norway',
+        'Romania',
+        'Austria',
+        'Portugal',
+        'Poland'
+    ]
 
     # Create an empty data frame to house data
     df_cases = pd.DataFrame(
         columns=[
-            'obs_date', 'number_of_cases'
+            'obs_date',
+            'number_of_cases'
         ]
     )
 
@@ -62,11 +71,14 @@ def run(job_input: IJobInput):
         df['country'] = ctry_list[i]
 
         df_cases = pd.concat(
-            [df, df_cases],
+            [df,
+             df_cases],
             axis=0)
 
     # Keep only the dates which are not present in the table already (based on last_date_covid_cases property)
-    df_cases = df_cases[df_cases['obs_date'] > props["last_date_covid_cases"]]
+    df_cases = df_cases[
+        df_cases['obs_date'] > props["last_date_covid_cases"]
+    ]
 
     log.info(f"The total number of rows to be ingested to covid_cases_europe_daily is: {len(df_cases)}.")
     log.info(df_cases)
@@ -85,4 +97,4 @@ def run(job_input: IJobInput):
         job_input.set_all_properties(props)
 
     log.info(f"Success! {len(df_cases)} rows were inserted in table covid_cases_europe_daily.")
-    log.info(f"End of Script: The covid_cases_europe_daily last previous date is {props['last_date_covid_cases']}")
+    log.info(f"End of {__name__}: The covid_cases_europe_daily last previous date is {props['last_date_covid_cases']}")

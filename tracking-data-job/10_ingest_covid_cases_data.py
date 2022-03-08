@@ -16,11 +16,6 @@ def run(job_input: IJobInput):
 
     log.info(f"Starting job step {__name__}")
 
-    # If ingesting for the first time, run these cells, otherwise comment them out
-    #props = job_input.get_all_properties()
-    #props = {}
-    #job_input.set_all_properties(props)
-
     # Create/retrieve the data job property storing the latest ingested date for the covid_cases_europe_daily table.
     # If the property does not exist, set it to "2020-01-01" (around the start of the pandemic).
     props = job_input.get_all_properties()
@@ -28,7 +23,7 @@ def run(job_input: IJobInput):
         pass
     else:
         props["last_date_covid_cases"] = "2020-01-01"
-    log.info(f"The covid_cases_europe_daily last previous date is {props}")
+    log.info(f"Beginning of Script: The covid_cases_europe_daily last previous date is {props['last_date_covid_cases']}")
 
     # Initialize URL
     url = "https://covid-api.mmediagroup.fr/v1/history?continent=Europe&status=confirmed"
@@ -90,3 +85,4 @@ def run(job_input: IJobInput):
         job_input.set_all_properties(props)
 
     log.info(f"Success! {len(df_cases)} rows were inserted in table covid_cases_europe_daily.")
+    log.info(f"End of Script: The covid_cases_europe_daily last previous date is {props['last_date_covid_cases']}")

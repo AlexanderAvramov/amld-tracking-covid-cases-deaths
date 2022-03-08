@@ -23,7 +23,7 @@ def run(job_input: IJobInput):
         pass
     else:
         props["last_date_covid_deaths"] = "2020-01-01"
-    log.info(f"The covid_deaths_europe_daily last previous date is {props}")
+    log.info(f"Beginning of script: The covid_deaths_europe_daily last previous date is {props['last_date_covid_deaths']}")
 
     # Initialize URL
     url = "https://covid-api.mmediagroup.fr/v1/history?continent=Europe&status=deaths"
@@ -85,3 +85,4 @@ def run(job_input: IJobInput):
         job_input.set_all_properties(props)
 
     log.info(f"Success! {len(df_deaths)} rows were inserted in table covid_deaths_europe_daily.")
+    log.info(f"End of script: The covid_deaths_europe_daily last previous date is {props['last_date_covid_deaths']}")

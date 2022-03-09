@@ -91,7 +91,7 @@ def run(job_input: IJobInput):
         # Reset the last_date property value to the latest date in the covid source db table
         props["last_date_cases_deaths"] = max(df_cases_deaths['obs_date'])
         job_input.set_all_properties(props)
-        log.info(f"Success! {len(df_cases_deaths)} rows were inserted.")
+        log.info(f"Success! {len(df_cases_deaths)} rows were inserted into covid_cases_deaths_europe_daily.")
     else:
         log.info("No new records to ingest.")
 

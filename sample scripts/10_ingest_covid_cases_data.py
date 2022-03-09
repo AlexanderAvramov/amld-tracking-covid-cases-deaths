@@ -100,3 +100,4 @@ def run(job_input: IJobInput):
     log.info(f"Success! {len(df_cases)} rows were inserted in table covid_cases_europe_daily.")
     log.info("ATTENTION!!!")
     log.info(f"END OF {__name__}: THE covid_cases_europe_daily LAST PREVIOUS DATE IS {props['last_date_covid_cases']}")
+    time.sleep(60)

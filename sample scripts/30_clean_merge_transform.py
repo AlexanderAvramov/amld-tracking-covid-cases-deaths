@@ -10,9 +10,6 @@ import matplotlib.pyplot as plt
 from vdk.api.job_input import IJobInput
 
 log = logging.getLogger(__name__)
-# make current directory to be the same as job directory
-os.chdir(pathlib.Path(__file__).parent.absolute())
-
 
 def run(job_input: IJobInput):
     """
@@ -32,6 +29,15 @@ def run(job_input: IJobInput):
     log.info(f"BEGINNING of {__name__}: THE covid_cases_deaths_europe_daily LAST PREVIOUS DATE IS {props['last_date_cases_deaths']}")
 
     # Read the cases table and transform to df
+    log.info("the earliest and latest dates in covid_cases_europe_daily are:")
+    log.info(
+        job_input.execute_query(
+            f"""
+            SELECT min(obs_date), max(obs_date)
+            FROM covid_cases_europe_daily
+            """
+        )
+    )
     cases = job_input.execute_query(
         f"""
         SELECT *
@@ -42,6 +48,15 @@ def run(job_input: IJobInput):
     df_cases = pd.DataFrame(cases, columns=['obs_date', 'number_of_cases', 'country'])
 
     # Read the deaths data and transform to df
+    log.info("the earliest and latest dates in covid_deaths_europe_daily are:")
+    log.info(
+        job_input.execute_query(
+            f"""
+            SELECT min(obs_date), max(obs_date)
+            FROM covid_deaths_europe_daily
+            """
+        )
+    )
     deaths = job_input.execute_query(
         f"""
         SELECT * 
@@ -87,7 +102,7 @@ def run(job_input: IJobInput):
     # If any data is returned, ingest
     if len(df_cases_deaths) > 0:
         job_input.send_tabular_data_for_ingestion(
-            rows=df_cases_deaths.values,
+            rows=df_cases_deaths.itertuples(index=False),
             column_names=df_cases_deaths.columns.to_list(),
             destination_table="covid_cases_deaths_europe_daily"
         )

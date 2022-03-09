@@ -13,6 +13,7 @@ log = logging.getLogger(__name__)
 # make current directory to be the same as job directory
 os.chdir(pathlib.Path(__file__).parent.absolute())
 
+
 def run(job_input: IJobInput):
     """
     Merge the European countries' cases and deaths and turn them from a cumulative data set to a daily data set.
@@ -20,20 +21,22 @@ def run(job_input: IJobInput):
 
     log.info(f"Starting job step {__name__}")
 
-    # Create/retrieve the data job property storing latest ingested date for covid_cases_deaths_europe table.
+    # Create/retrieve the data job property storing latest ingested date for covid_cases_deaths_europe_daily table.
     # If the property does not exist, set it to "2020-01-01" (around the start of the pandemic).
     props = job_input.get_all_properties()
     if "last_date_cases_deaths" in props:
         pass
     else:
         props["last_date_cases_deaths"] = '2020-01-01'
+    log.info('ATTENTION!!!')
+    log.info(f"BEGINNING of {__name__}: THE covid_cases_deaths_europe_daily LAST PREVIOUS DATE IS {props['last_date_cases_deaths']}")
 
     # Read the cases table and transform to df
     cases = job_input.execute_query(
         f"""
         SELECT *
         FROM covid_cases_europe_daily
-        WHERE date > '{props["last_date_cases_deaths"]}'
+        WHERE obs_date > '{props["last_date_cases_deaths"]}'
         """
     )
     df_cases = pd.DataFrame(cases, columns=['obs_date', 'number_of_cases', 'country'])
@@ -68,26 +71,32 @@ def run(job_input: IJobInput):
         df_cases_deaths["number_of_deaths"],
         df_cases_deaths["number_of_covid_deaths_daily"])
 
-    # Keep only relevant columns
-    df_cases_deaths = df_cases_deaths[
-        ['obs_date', 'country', 'number_of_covid_cases_daily', 'number_of_covid_deaths_daily']]
-
     log.info(df_cases_deaths.head())
     log.info(df_cases_deaths.tail())
 
     # Check if the last ingested day is contained in df_merged_weekly. If yes, remove it.
     df_cases_deaths = df_cases_deaths[df_cases_deaths['obs_date'] > props["last_date_cases_deaths"]]
 
+    # Keep only relevant columns
+    df_cases_deaths = df_cases_deaths[
+        ['obs_date', 'country', 'number_of_covid_cases_daily', 'number_of_covid_deaths_daily']]
+
+    # Turn obs_date to varchar
+    df_cases_deaths['obs_date'] = df_cases_deaths['obs_date'].astype("string")
+
     # If any data is returned, ingest
     if len(df_cases_deaths) > 0:
         job_input.send_tabular_data_for_ingestion(
             rows=df_cases_deaths.values,
             column_names=df_cases_deaths.columns.to_list(),
-            destination_table="covid_cases_deaths_europe"
+            destination_table="covid_cases_deaths_europe_daily"
         )
         # Reset the last_date property value to the latest date in the covid source db table
-        props["number_of_covid_deaths_daily"] = max(df_cases_deaths['obs_date'])
+        props["last_date_cases_deaths"] = max(df_cases_deaths['obs_date'])
         job_input.set_all_properties(props)
-        log.info(f"Success! {len(number_of_covid_deaths_daily)} rows were inserted.")
+        log.info(f"Success! {len(df_cases_deaths)} rows were inserted.")
     else:
         log.info("No new records to ingest.")
+
+    log.info('ATTENTION!!!')
+    log.info(f"END of {__name__}: THE covid_cases_deaths_europe_daily LAST PREVIOUS DATE IS {props['last_date_cases_deaths']}")

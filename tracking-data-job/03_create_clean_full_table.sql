@@ -1,4 +1,4 @@
-CREATE TABLE IF NOT EXISTS covid_cases_deaths_europe (
+CREATE TABLE IF NOT EXISTS covid_cases_deaths_europe_daily (
     obs_date VARCHAR,
     country VARCHAR,
     number_of_cases_daily INTEGER,

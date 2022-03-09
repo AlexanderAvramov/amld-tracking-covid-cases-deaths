@@ -29,15 +29,6 @@ def run(job_input: IJobInput):
     log.info(f"BEGINNING of {__name__}: THE covid_cases_deaths_europe_daily LAST PREVIOUS DATE IS {props['last_date_cases_deaths']}")
 
     # Read the cases table and transform to df
-    log.info("the earliest and latest dates in covid_cases_europe_daily are:")
-    log.info(
-        job_input.execute_query(
-            f"""
-            SELECT min(obs_date), max(obs_date)
-            FROM covid_cases_europe_daily
-            """
-        )
-    )
     cases = job_input.execute_query(
         f"""
         SELECT *
@@ -48,15 +39,6 @@ def run(job_input: IJobInput):
     df_cases = pd.DataFrame(cases, columns=['obs_date', 'number_of_cases', 'country'])
 
     # Read the deaths data and transform to df
-    log.info("the earliest and latest dates in covid_deaths_europe_daily are:")
-    log.info(
-        job_input.execute_query(
-            f"""
-            SELECT min(obs_date), max(obs_date)
-            FROM covid_deaths_europe_daily
-            """
-        )
-    )
     deaths = job_input.execute_query(
         f"""
         SELECT * 

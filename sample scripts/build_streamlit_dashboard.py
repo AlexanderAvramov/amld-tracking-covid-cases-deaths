@@ -6,17 +6,8 @@ from trino import dbapi
 from trino import constants
 from trino.auth import BasicAuthentication
 import matplotlib.pyplot as plt
-import matplotlib.dates as mdates
-import scipy.stats
+import seaborn as sns
 
-# Page title and description
-st.title('Tracking Covid Cases and Deaths in a Randomly Selected Set of European Countries')
-st.write('The dashboard allows the user to specify the time series that they would like to see, with a drop down menu'
-         ' for the country and type of metrics. It also allows the user to specify the time range they would like to see'
-         'the time series chart for.')
-
-# Sub-header
-st.header('Number of Monthly Covid Cases and Deaths')
 
 # Definitions
 os.chdir(pathlib.Path(__file__).parent.absolute())
@@ -35,20 +26,19 @@ conn = dbapi.connect(
     request_timeout=600,
 )
 
-# Fetch data
+# Fetch data and format date variable
 df = pd.read_sql_query(
     f"SELECT * FROM covid_cases_deaths_europe_daily", conn
 )
-
-# Transform into datetime Series
 df['date'] = pd.to_datetime(df['obs_date'], format='%Y-%m-%d')
 
-# Transform into monthly data
-df['yearmo'] = df['date'].dt.strftime('%Y-%m')
-df = df.copy()[['yearmo', 'country', 'number_of_cases_daily', 'number_of_deaths_daily']].groupby(['yearmo', 'country']).max()
+# Page title and description
+st.title('Tracking Covid Cases and Deaths')
+st.header('In a Randomly Selected Set of European Countries')
+st.subheader("Please Select a Country From the Drop-Down Menu on the Left")
 
 # Allow user to pick country
-ctry = st.selectbox(
+ctry = st.sidebar.selectbox(
      'Please select a country from the drop-down menu below:',
      ('Greece',
       'Italy',
@@ -58,15 +48,41 @@ ctry = st.selectbox(
       'Portugal',
       'Poland'))
 
-st.write('You selected:', ctry)
-st.dataframe(df)
+st.metric('You selected:', ctry)
 
-# Plot # COVID cases vs no-scent complaints over time
+# Sub-header: Current Daily Values
+st.header('Most Recent Daily Number of Cases and Deaths')
+
+todays_nums = df[df['country'] == ctry]
+todays_nums = todays_nums[todays_nums['date'] == todays_nums['date'].max()]
+todays_date = todays_nums[['date']].astype('string').iloc[0][0]
+todays_cases = todays_nums[['number_of_covid_cases_daily']].iloc[0][0]
+todays_deaths = todays_nums[['number_of_covid_deaths_daily']].iloc[0][0]
+
+st.metric('Last Available Date', todays_date)
+st.metric('Number of Daily Cases', todays_cases)
+st.metric('Number of Daily Deaths', todays_deaths)
+
+# Sub-header: Monthly Table
+st.header('Number of Monthly Covid Cases and Deaths')
+
+# Transform Into Monthly Data
+df['yearmo'] = df['date'].dt.strftime('%Y-%m')
+df_ctry = df[df['country'] == ctry]
+df_ctry = df_ctry[['yearmo', 'country', 'number_of_covid_cases_daily', 'number_of_covid_deaths_daily']].groupby(['yearmo', 'country']).sum().reset_index()
+df_ctry.sort_values(by = 'yearmo', ascending=False, inplace=True)
+df_ctry.rename(columns={"number_of_covid_cases_daily": "number_of_covid_cases_monthly", "number_of_covid_deaths_daily": "number_of_covid_deaths_monthly"}, inplace=True)
+st.dataframe(df_ctry)
+
+# Sub-header: Monthly Chart
+st.header('Number of Monthly Covid Cases and Deaths - Chart')
+sns.set_theme(style="darkgrid")
+
 fig, ax = plt.subplots(figsize=(12, 6))
 ax2 = ax.twinx()
 ax.set_title('Covid Cases and Deaths')
-ax.plot(df['yearmo'], df['number_of_cases_daily'], color='green')
-ax2.plot(df['yearmo'], df['number_of_deaths_daily'], color='red')
+ax.plot(df_ctry['yearmo'], df_ctry['number_of_covid_cases_monthly'], color='green')
+ax2.plot(df_ctry['yearmo'], df_ctry['number_of_covid_deaths_monthly'], color='red')
 ax.set_ylabel('Number of Cases')
 ax2.set_ylabel('Number of Deaths')
 ax.legend(['Covid Cases'])
@@ -77,3 +93,5 @@ ax.xaxis.set_major_formatter(
     mdates.ConciseDateFormatter(ax.xaxis.get_major_locator()))
 plt.tight_layout()
 st.pyplot(fig=plt)
+
+st.line_chart(df_ctry)

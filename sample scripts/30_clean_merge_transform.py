@@ -26,7 +26,9 @@ def run(job_input: IJobInput):
     else:
         props["last_date_cases_deaths"] = '2020-01-01'
     log.info('ATTENTION!!!')
-    log.info(f"BEGINNING of {__name__}: THE covid_cases_deaths_europe_daily LAST PREVIOUS DATE IS {props['last_date_cases_deaths']}")
+    log.info(
+        f"BEGINNING of {__name__}: THE covid_cases_deaths_europe_daily LAST PREVIOUS DATE IS {props['last_date_cases_deaths']}"
+    )
 
     # Read the cases table and transform to df
     cases = job_input.execute_query(
@@ -36,7 +38,8 @@ def run(job_input: IJobInput):
         WHERE obs_date > '{props["last_date_cases_deaths"]}'
         """
     )
-    df_cases = pd.DataFrame(cases, columns=['obs_date', 'number_of_cases', 'country'])
+    df_cases = pd.DataFrame(cases,
+                            columns=['obs_date', 'number_of_cases', 'country'])
 
     # Read the deaths data and transform to df
     deaths = job_input.execute_query(
@@ -46,14 +49,21 @@ def run(job_input: IJobInput):
         WHERE obs_date > '{props["last_date_cases_deaths"]}'
         """
     )
-    df_deaths = pd.DataFrame(deaths, columns=['obs_date', 'number_of_deaths', 'country'])
+    df_deaths = pd.DataFrame(deaths,
+                             columns=['obs_date', 'number_of_deaths', 'country'])
 
     # Merge the two dataframes
-    df_cases_deaths = pd.merge(df_cases, df_deaths, on=['obs_date', 'country'])
+    df_cases_deaths = pd.merge(df_cases,
+                               df_deaths,
+                               on=['obs_date', 'country'])
 
     # Calculate new covid cases per day (current numbers are cumulative)
-    df_cases_deaths.sort_values(by=['country', 'obs_date'], ascending=False, inplace=True)
-    df_cases_deaths['obs_date'] = pd.to_datetime(df_cases_deaths['obs_date'], format='%Y-%m-%d')
+    df_cases_deaths.sort_values(by=['country', 'obs_date'],
+                                ascending=False,
+                                inplace=True)
+    df_cases_deaths['obs_date'] = pd.to_datetime(
+        df_cases_deaths['obs_date'], format='%Y-%m-%d'
+    )
     df_cases_deaths['number_of_covid_cases_daily'] = df_cases_deaths['number_of_cases'].diff(periods=-1).fillna(0)
     df_cases_deaths['number_of_covid_deaths_daily'] = df_cases_deaths['number_of_deaths'].diff(periods=-1).fillna(0)
 
@@ -68,23 +78,26 @@ def run(job_input: IJobInput):
         df_cases_deaths["number_of_deaths"],
         df_cases_deaths["number_of_covid_deaths_daily"])
 
-    log.info(df_cases_deaths.head())
-    log.info(df_cases_deaths.tail())
-
     # Check if the last ingested day is contained in df_merged_weekly. If yes, remove it.
-    df_cases_deaths = df_cases_deaths[df_cases_deaths['obs_date'] > props["last_date_cases_deaths"]]
+    df_cases_deaths = df_cases_deaths[
+        df_cases_deaths['obs_date'] > props["last_date_cases_deaths"]
+    ]
 
     # Keep only relevant columns
     df_cases_deaths = df_cases_deaths[
-        ['obs_date', 'country', 'number_of_covid_cases_daily', 'number_of_covid_deaths_daily']]
+        ['obs_date', 'country', 'number_of_covid_cases_daily', 'number_of_covid_deaths_daily']
+    ]
 
     # Turn obs_date to varchar
     df_cases_deaths['obs_date'] = df_cases_deaths['obs_date'].astype("string")
 
+    # Print to observe
+    log.info(df_cases_deaths.head())
+
     # If any data is returned, ingest
     if len(df_cases_deaths) > 0:
         job_input.send_tabular_data_for_ingestion(
-            rows=df_cases_deaths.itertuples(index=False),
+            rows=df_cases_deaths.values,
             column_names=df_cases_deaths.columns.to_list(),
             destination_table="covid_cases_deaths_europe_daily"
         )
@@ -96,4 +109,6 @@ def run(job_input: IJobInput):
         log.info("No new records to ingest.")
 
     log.info('ATTENTION!!!')
-    log.info(f"END of {__name__}: THE covid_cases_deaths_europe_daily LAST PREVIOUS DATE IS {props['last_date_cases_deaths']}")
+    log.info(
+        f"END of {__name__}: THE covid_cases_deaths_europe_daily LAST PREVIOUS DATE IS {props['last_date_cases_deaths']}"
+    )

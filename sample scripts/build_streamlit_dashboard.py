@@ -10,17 +10,16 @@ import matplotlib.dates as mdates
 import scipy.stats
 
 # Page title and description
-st.title('Correlation analysis: COVID-19 cases in the US and Yankee candle reviews indicating "no scent"')
-st.write('The dashboard shows the relationship between weekly COVID cases in the US and bad US Amazon reviews '
-         'containing the words "smell", "fragrance" or "scent" for one of the most popular [Yankee candles on Amazon]'
-         '(https://www.amazon.com/Yankee-Candle-Large-Balsam-Cedar/dp/B000JDGC78/ref=cm_cr_arp_d_product_top?ie=UTF8).')
+st.title('Tracking Covid Cases and Deaths in a Randomly Selected Set of European Countries')
+st.write('The dashboard allows the user to specify the time series that they would like to see, with a drop down menu'
+         ' for the country and type of metrics. It also allows the user to specify the time range they would like to see'
+         'the time series chart for.')
 
 # Sub-header
-st.header('Number of weekly COVID cases and "no scent" reviews over time')
+st.header('Number of Monthly Covid Cases and Deaths')
 
 # Definitions
 os.chdir(pathlib.Path(__file__).parent.absolute())
-db_file = 'correlation-example-db.db'
 
 # Create a connection to the db
 auth = None
@@ -35,45 +34,46 @@ conn = dbapi.connect(
     verify=False,
     request_timeout=600,
 )
+
 # Fetch data
 df = pd.read_sql_query(
-    f"SELECT * FROM weekly_correlation", conn
+    f"SELECT * FROM covid_cases_deaths_europe_daily", conn
 )
+
 # Transform into datetime Series
-df['date'] = pd.to_datetime(df['date'], format='%Y-%m-%d')
+df['date'] = pd.to_datetime(df['obs_date'], format='%Y-%m-%d')
+
+# Transform into monthly data
+df['yearmo'] = df['date'].dt.strftime('%Y-%m')
+df = df.copy()[['yearmo', 'country', 'number_of_cases_daily', 'number_of_deaths_daily']].groupby(['yearmo', 'country']).max()
+
+# Allow user to pick country
+ctry = st.selectbox(
+     'Please select a country from the drop-down menu below:',
+     ('Greece',
+      'Italy',
+      'Norway',
+      'Romania',
+      'Austria',
+      'Portugal',
+      'Poland'))
+
+st.write('You selected:', ctry)
+st.dataframe(df)
 
 # Plot # COVID cases vs no-scent complaints over time
 fig, ax = plt.subplots(figsize=(12, 6))
 ax2 = ax.twinx()
-ax.set_title('No scent Yankee candle reviews and COVID cases')
-ax.plot(df['date'], df['num_no_scent_reviews'], color='green')
-ax2.plot(df['date'], df['number_of_covid_cases_weekly'], color='red')
-ax.set_ylabel('# "No scent" reviews')
-ax2.set_ylabel('# Covid cases weekly (in mln)')
-ax.legend(['no scent reviews'])
-ax2.legend(['weekly covid cases'], loc='upper center')
-ax.xaxis.set_major_locator(mdates.MonthLocator(bymonth=range(1,13)))
+ax.set_title('Covid Cases and Deaths')
+ax.plot(df['yearmo'], df['number_of_cases_daily'], color='green')
+ax2.plot(df['yearmo'], df['number_of_deaths_daily'], color='red')
+ax.set_ylabel('Number of Cases')
+ax2.set_ylabel('Number of Deaths')
+ax.legend(['Covid Cases'])
+ax2.legend(['Covid Deaths'], loc='upper center')
+ax.xaxis.set_major_locator(mdates.MonthLocator(bymonth=range(1, 13)))
 ax.xaxis.set_minor_locator(mdates.MonthLocator())
 ax.xaxis.set_major_formatter(
     mdates.ConciseDateFormatter(ax.xaxis.get_major_locator()))
 plt.tight_layout()
 st.pyplot(fig=plt)
-
-# Sub-header
-st.header('Weekly correlation between "no scent" reviews and covid cases')
-
-# Current period correlation
-corr_coeff = round(df[df['date']==max(df['date'])]['correlation_coeff'], 3)
-st.metric("The current correlation coefficient is:", corr_coeff)
-
-# Plot the correlation coefficients over time
-st.write('Correlation coefficient over time:')
-df = df.rename(columns={'date': 'index'}).set_index('index')
-st.line_chart(data=df[['correlation_coeff']])
-# Show data in a table
-st.write('Underlying data:')
-df = df.reset_index().rename(columns={'index': 'week'}).sort_values('week', ascending=False)
-# Convert date to string
-df['week'] = df['week'].dt.strftime('%Y-%m-%d')
-# Visualize in the dashboard
-st.dataframe(df[['week', 'correlation_coeff']])

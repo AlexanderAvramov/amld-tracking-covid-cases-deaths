@@ -9,6 +9,7 @@ from vdk.api.job_input import IJobInput
 
 log = logging.getLogger(__name__)
 
+
 def run(job_input: IJobInput):
     """
     Collect COVID-19 historical data for the number of deaths per day in a randomly selected set of European countries
@@ -25,7 +26,8 @@ def run(job_input: IJobInput):
     else:
         props["last_date_covid_deaths"] = "2020-01-01"
     log.info("ATTENTION!!!")
-    log.info(f"BEGINNING of {__name__}: THE covid_deaths_europe_daily LAST PREVIOUS DATE IS {props['last_date_covid_deaths']}")
+    log.info(
+        f"BEGINNING of {__name__}: THE covid_deaths_europe_daily LAST PREVIOUS DATE IS {props['last_date_covid_deaths']}")
 
     # Initialize URL
     url = "https://covid-api.mmediagroup.fr/v1/history?continent=Europe&status=deaths"
@@ -37,7 +39,7 @@ def run(job_input: IJobInput):
     response.raise_for_status()
     r = response.json()
 
-    # Get the random sample of countries from cases data set
+    # Get the random sample of countries
     ctry_list = [
         'Greece',
         'Italy',
@@ -57,21 +59,21 @@ def run(job_input: IJobInput):
     )
 
     # Populate the empty Data Frame
-    for i in range(len(ctry_list)):    
+    for i in range(len(ctry_list)):
         dates_deaths = r[ctry_list[i]]['All']['dates']
-        
+
         dates_deaths_dict = {
             'obs_date': [],
             'number_of_deaths': []
         }
-        
+
         for k, v in dates_deaths.items():
             dates_deaths_dict['obs_date'].append(k)
             dates_deaths_dict['number_of_deaths'].append(v)
-        
+
         df = pd.DataFrame.from_dict(dates_deaths_dict)
         df['country'] = ctry_list[i]
-        
+
         df_deaths = pd.concat(
             [df,
              df_deaths],
@@ -87,7 +89,7 @@ def run(job_input: IJobInput):
     # Ingest the data to the cloud DB
     if len(df_deaths) > 0:
         job_input.send_tabular_data_for_ingestion(
-            rows=df_deaths.itertuples(index=False),
+            rows=df_deaths.values,
             column_names=df_deaths.columns.to_list(),
             destination_table="covid_deaths_europe_daily"
         )
@@ -98,5 +100,6 @@ def run(job_input: IJobInput):
 
     log.info(f"Success! {len(df_deaths)} rows were inserted in table covid_deaths_europe_daily.")
     log.info("ATTENTION!!!")
-    log.info(f"END of {__name__}: THE covid_deaths_europe_daily LAST PREVIOUS DATE IS {props['last_date_covid_deaths']}")
+    log.info(
+        f"END of {__name__}: THE covid_deaths_europe_daily LAST PREVIOUS DATE IS {props['last_date_covid_deaths']}")
     time.sleep(60)

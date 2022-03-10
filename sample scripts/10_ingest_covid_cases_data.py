@@ -9,6 +9,7 @@ from vdk.api.job_input import IJobInput
 
 log = logging.getLogger(__name__)
 
+
 def run(job_input: IJobInput):
     """
     Collect COVID-19 historical data for the number of cases per day in a randomly selected set of European countries
@@ -25,14 +26,15 @@ def run(job_input: IJobInput):
     else:
         props["last_date_covid_cases"] = "2020-01-01"
     log.info("ATTENTION!!!")
-    log.info(f"BEGINNING OF {__name__}: THE covid_cases_europe_daily LAST PREVIOUS DATE IS {props['last_date_covid_cases']}")
+    log.info(
+        f"BEGINNING OF {__name__}: THE covid_cases_europe_daily LAST PREVIOUS DATE IS {props['last_date_covid_cases']}")
 
     # Initialize URL
     url = "https://covid-api.mmediagroup.fr/v1/history?continent=Europe&status=confirmed"
 
     # Make a GET request to the COVID-19 API
     response = requests.get(url)
-    
+
     # Check if the request was successful
     response.raise_for_status()
 
@@ -80,16 +82,15 @@ def run(job_input: IJobInput):
     # Keep only the dates which are not present in the table already (based on last_date_covid_cases property)
     df_cases = df_cases[
         df_cases['obs_date'] > props["last_date_covid_cases"]
-    ]
+        ]
 
     log.info(f"The total number of rows to be ingested to covid_cases_europe_daily is: {len(df_cases)}.")
     log.info(df_cases)
 
     # Ingest the data to the cloud DB
     if len(df_cases) > 0:
-
         job_input.send_tabular_data_for_ingestion(
-            rows=df_cases.itertuples(index=False),
+            rows=df_cases.values,
             column_names=df_cases.columns.to_list(),
             destination_table="covid_cases_europe_daily"
         )
@@ -101,4 +102,3 @@ def run(job_input: IJobInput):
     log.info(f"Success! {len(df_cases)} rows were inserted in table covid_cases_europe_daily.")
     log.info("ATTENTION!!!")
     log.info(f"END OF {__name__}: THE covid_cases_europe_daily LAST PREVIOUS DATE IS {props['last_date_covid_cases']}")
-    time.sleep(60)

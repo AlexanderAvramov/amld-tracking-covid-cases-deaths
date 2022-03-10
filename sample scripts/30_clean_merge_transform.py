@@ -88,9 +88,11 @@ def run(job_input: IJobInput):
         ['obs_date', 'country', 'number_of_covid_cases_daily', 'number_of_covid_deaths_daily']
     ]
 
-    # Turn obs_date to varchar
+    # Turn variables to needed types
     df_cases_deaths['obs_date'] = df_cases_deaths['obs_date'].astype("string")
-
+    df_cases_deaths['number_of_covid_cases_daily'] = df_cases_deaths['number_of_covid_cases_daily'].astype("int")
+    df_cases_deaths['number_of_covid_deaths_daily'] = df_cases_deaths['number_of_covid_deaths_daily'].astype("int")
+    
     # Print to observe
     log.info(df_cases_deaths.head())
 

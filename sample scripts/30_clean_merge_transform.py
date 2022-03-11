@@ -9,16 +9,16 @@ from vdk.api.job_input import IJobInput
 
 log = logging.getLogger(__name__)
 
-
 def run(job_input: IJobInput):
     """
     Merge the European countries' cases and deaths and turn them from a cumulative data set to a daily data set.
+    Do this in an incremental manner.
     """
 
     log.info(f"Starting job step {__name__}")
 
-    # Create/retrieve the data job property storing latest ingested date for covid_cases_deaths_europe_daily table.
-    # If the property does not exist, set it to "2020-01-01" (around the start of the pandemic).
+    # Create/retrieve the data job property storing the latest ingested date for the covid_cases_deaths_europe_daily
+    # table. If the property does not exist, set it to "2020-01-01" (around the start of the pandemic).
     props = job_input.get_all_properties()
     if "last_date_cases_deaths" in props:
         pass
@@ -26,10 +26,10 @@ def run(job_input: IJobInput):
         props["last_date_cases_deaths"] = '2020-01-01'
     log.info('ATTENTION!!!')
     log.info(
-        f"BEGINNING of {__name__}: THE covid_cases_deaths_europe_daily LAST PREVIOUS DATE IS {props['last_date_cases_deaths']}"
+        f"BEGINNING of {__name__}: THE covid_cases_deaths_europe_daily LAST INGESTED DATE IS {props['last_date_cases_deaths']}"
     )
 
-    # Read the cases table and transform to df
+    # Read the cases table and transform to df - filter using last_date_cases_deaths
     cases = job_input.execute_query(
         f"""
         SELECT *
@@ -38,9 +38,12 @@ def run(job_input: IJobInput):
         """
     )
     df_cases = pd.DataFrame(cases,
-                            columns=['obs_date', 'number_of_cases', 'country'])
+                            columns=['obs_date',
+                                     'number_of_cases',
+                                     'country']
+                            )
 
-    # Read the deaths data and transform to df
+    # Read the deaths data and transform to df - filter using last_date_cases_deaths
     deaths = job_input.execute_query(
         f"""
         SELECT * 
@@ -49,40 +52,93 @@ def run(job_input: IJobInput):
         """
     )
     df_deaths = pd.DataFrame(deaths,
-                             columns=['obs_date', 'number_of_deaths', 'country'])
+                             columns=['obs_date',
+                                      'number_of_deaths',
+                                      'country']
+                             )
 
     # Merge the two dataframes
     df_cases_deaths = pd.merge(df_cases,
                                df_deaths,
-                               on=['obs_date', 'country'])
+                               on=['obs_date', 'country']
+                               )
 
-    # Calculate new covid cases per day (current numbers are cumulative)
+    # Turn the obs_date into a datetime object
+    df_cases_deaths['obs_date'] = pd.to_datetime(
+        df_cases_deaths['obs_date'],
+        format='%Y-%m-%d'
+    )
+
+    # Sort the data by country and by date
     df_cases_deaths.sort_values(
         by=['country', 'obs_date'],
         ascending=False,
         inplace=True
     )
-    df_cases_deaths['obs_date'] = pd.to_datetime(
-        df_cases_deaths['obs_date'], format='%Y-%m-%d'
+
+    # First check if there is already data in the covid_cases_deaths_europe_daily table
+    # If so, ingest the last date's cumulative figures and calculate the change using that as base
+    # If not, we're ingesting the entire data
+    prev_day_df = job_input.execute_query(
+        f"""
+        SELECT c.obs_date, c.country, c.number_of_cases, d.number_of_deaths
+        FROM covid_cases_europe_daily as c
+        JOIN covid_deaths_europe_daily as d
+            ON c.obs_date = d.obs_date
+            AND c.country = d.country
+        WHERE obs_date = '{props["last_date_cases_deaths"]}'
+        """
     )
-    df_cases_deaths['number_of_covid_cases_daily'] = df_cases_deaths['number_of_cases'].diff(periods=-1).fillna(0)
-    df_cases_deaths['number_of_covid_deaths_daily'] = df_cases_deaths['number_of_deaths'].diff(periods=-1).fillna(0)
+    prev_day_df = pd.DataFrame(prev_day_df,
+                               columns=['obs_date',
+                                        'country',
+                                        'number_of_cases',
+                                        'number_of_deaths']
+                               )
+    prev_day_df['obs_date'] = pd.to_datetime(
+        prev_day_df['obs_date'],
+        format='%Y-%m-%d'
+    )
+    log.info("Previous time period's ingested data:")
+    log.info(prev_day_df)
 
-    # Fix instances of change of country
-    df_cases_deaths["number_of_covid_cases_daily"] = np.where(
-        df_cases_deaths["obs_date"] == '2020-01-22',
-        df_cases_deaths["number_of_cases"],
-        df_cases_deaths["number_of_covid_cases_daily"])
-
-    df_cases_deaths["number_of_covid_deaths_daily"] = np.where(
-        df_cases_deaths["obs_date"] == '2020-01-22',
-        df_cases_deaths["number_of_deaths"],
-        df_cases_deaths["number_of_covid_deaths_daily"])
-
-    # Check if the last ingested day is contained in df_merged_weekly. If yes, remove it.
-    df_cases_deaths = df_cases_deaths[
-        df_cases_deaths['obs_date'] > props["last_date_cases_deaths"]
+    if len(prev_day_df) > 0:
+        df_cases_deaths = pd.concat(
+            [df_cases_deaths, prev_day_df],
+            ignore_index=True
+        )
+        df_cases_deaths.sort_values(
+            by=['country', 'obs_date'],
+            ascending=False,
+            inplace=True
+        )
+        df_cases_deaths['number_of_covid_cases_daily'] = df_cases_deaths['number_of_cases'].diff(periods=-1).fillna(0)
+        df_cases_deaths['number_of_covid_deaths_daily'] = df_cases_deaths['number_of_deaths'].diff(periods=-1).fillna(0)
+        df_cases_deaths = df_cases_deaths[
+            df_cases_deaths['obs_date'] > props["last_date_cases_deaths"]
         ]
+    else:
+        df_cases_deaths.sort_values(
+            by=['country', 'obs_date'],
+            ascending=False,
+            inplace=True
+        )
+        df_cases_deaths['number_of_covid_cases_daily'] = df_cases_deaths['number_of_cases'].diff(periods=-1).fillna(0)
+        df_cases_deaths['number_of_covid_deaths_daily'] = df_cases_deaths['number_of_deaths'].diff(periods=-1).fillna(0)
+
+        df_cases_deaths["number_of_covid_cases_daily"] = np.where(
+            df_cases_deaths["obs_date"] == '2020-01-22',
+            df_cases_deaths["number_of_cases"],
+            df_cases_deaths["number_of_covid_cases_daily"])
+
+        df_cases_deaths["number_of_covid_deaths_daily"] = np.where(
+            df_cases_deaths["obs_date"] == '2020-01-22',
+            df_cases_deaths["number_of_deaths"],
+            df_cases_deaths["number_of_covid_deaths_daily"])
+
+        df_cases_deaths = df_cases_deaths[
+            df_cases_deaths['obs_date'] > props["last_date_cases_deaths"]
+            ]
 
     # Turn variables to needed types
     df_cases_deaths['obs_date'] = df_cases_deaths['obs_date'].astype("string")

@@ -27,7 +27,7 @@ def run(job_input: IJobInput):
         props["last_date_covid_cases"] = "2020-01-01"
     log.info("ATTENTION!!!")
     log.info(
-        f"BEGINNING OF {__name__}: THE covid_cases_europe_daily LAST PREVIOUS DATE IS {props['last_date_covid_cases']}")
+        f"BEGINNING OF {__name__}: THE covid_cases_europe_daily LAST INGESTED DATE IS {props['last_date_covid_cases']}")
 
     # Initialize URL
     url = "https://covid-api.mmediagroup.fr/v1/history?continent=Europe&status=confirmed"
@@ -101,4 +101,4 @@ def run(job_input: IJobInput):
 
     log.info(f"Success! {len(df_cases)} rows were inserted in table covid_cases_europe_daily.")
     log.info("ATTENTION!!!")
-    log.info(f"END OF {__name__}: THE covid_cases_europe_daily LAST PREVIOUS DATE IS {props['last_date_covid_cases']}")
+    log.info(f"END OF {__name__}: THE covid_cases_europe_daily LAST INGESTED DATE IS {props['last_date_covid_cases']}")

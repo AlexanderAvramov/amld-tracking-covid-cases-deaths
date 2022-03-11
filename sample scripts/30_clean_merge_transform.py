@@ -86,7 +86,7 @@ def run(job_input: IJobInput):
         JOIN covid_deaths_europe_daily as d
             ON c.obs_date = d.obs_date
             AND c.country = d.country
-        WHERE obs_date = '{props["last_date_cases_deaths"]}'
+        WHERE c.obs_date = '{props["last_date_cases_deaths"]}'
         """
     )
     prev_day_df = pd.DataFrame(prev_day_df,
@@ -176,5 +176,5 @@ def run(job_input: IJobInput):
 
     log.info('ATTENTION!!!')
     log.info(
-        f"END of {__name__}: THE covid_cases_deaths_europe_daily LAST PREVIOUS DATE IS {props['last_date_cases_deaths']}"
+        f"END of {__name__}: THE covid_cases_deaths_europe_daily LAST INGESTED DATE IS {props['last_date_cases_deaths']}"
     )

@@ -1,5 +1,5 @@
-CREATE TABLE IF NOT EXISTS covid_deaths_europe_daily (
-    obs_date VARCHAR,
-    number_of_deaths INTEGER,
-    country VARCHAR
+CREATE TABLE IF NOT EXISTS !!! ENTER NAME HERE (
+    obs_date !!! ENTER TYPE HERE,
+    number_of_deaths !!! ENTER TYPE HERE,
+    country !!! ENTER TYPE HERE
 )

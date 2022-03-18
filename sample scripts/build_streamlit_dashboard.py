@@ -28,7 +28,7 @@ conn = dbapi.connect(
 
 # Fetch data and format date variable
 df = pd.read_sql_query(
-    f"SELECT * FROM covid_cases_deaths_europe_daily",
+    f"SELECT * FROM !!! ENTER NAME HERE",
     conn
 )
 df['date'] = pd.to_datetime(

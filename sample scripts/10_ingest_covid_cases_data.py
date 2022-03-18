@@ -88,11 +88,11 @@ def run(job_input: IJobInput):
     log.info(df_cases)
 
     # Ingest the data to the cloud DB
-    if len(df_cases) > 0:
+    if len(df_cases) > !!! ENTER VALUE HERE:
         job_input.send_tabular_data_for_ingestion(
             rows=df_cases.values,
             column_names=df_cases.columns.to_list(),
-            destination_table="covid_cases_europe_daily"
+            destination_table="!!! ENTER NAME HERE" # PLEASE NOTE: THE TABLE NAME NEEDS TO BE WITHIN QUOTATIONS !!!
         )
 
         # Reset the last_date property value to the latest date in the covid source db table

@@ -1,3 +1,5 @@
+# Copyright 2021 VMware, Inc.
+# SPDX-License-Identifier: Apache-2.0
 import pandas as pd
 import numpy as np
 import logging
@@ -11,7 +13,7 @@ log = logging.getLogger(__name__)
 
 def run(job_input: IJobInput):
     """
-    Merge the European countries' cases and deaths and turn them from a cumulative data set to a daily data set.
+    Merge the European countries' cases and deaths and turn them from a daily cumulative data set to a new cases/deaths daily data set.
     Do this in an incremental manner.
     """
 
@@ -33,7 +35,7 @@ def run(job_input: IJobInput):
     cases = job_input.execute_query(
         f"""
         SELECT *
-        FROM covid_cases_europe_daily
+        FROM !!! ENTER NAME HERE
         WHERE obs_date > '{props["last_date_cases_deaths"]}'
         """
     )
@@ -47,7 +49,7 @@ def run(job_input: IJobInput):
     deaths = job_input.execute_query(
         f"""
         SELECT * 
-        FROM covid_deaths_europe_daily
+        FROM !!! ENTER NAME HERE
         WHERE obs_date > '{props["last_date_cases_deaths"]}'
         """
     )
@@ -82,8 +84,8 @@ def run(job_input: IJobInput):
     prev_day_df = job_input.execute_query(
         f"""
         SELECT c.obs_date, c.country, c.number_of_cases, d.number_of_deaths
-        FROM covid_cases_europe_daily as c
-        JOIN covid_deaths_europe_daily as d
+        FROM !!! ENTER NAME HERE as c
+        JOIN !!! ENTER NAME HERE as d
             ON c.obs_date = d.obs_date
             AND c.country = d.country
         WHERE c.obs_date = '{props["last_date_cases_deaths"]}'
@@ -164,7 +166,7 @@ def run(job_input: IJobInput):
         job_input.send_tabular_data_for_ingestion(
             rows=df_cases_deaths.values,
             column_names=df_cases_deaths.columns.to_list(),
-            destination_table="covid_cases_deaths_europe_daily"
+            destination_table="!!! ENTER TABLE NAME HERE"
         )
 
         # Reset the last_date property value to the latest date in the covid source db table

@@ -61,9 +61,9 @@ vdk deploy
 ```
 
 ## Exercises
-Please open up MyBinder to get started on the exercises! (In progress)
+Please open up MyBinder to get started on the exercises!
 
-[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/AlexanderAvramov/amld-tracking-covid-cases-deaths/HEAD?labpath=setup.ipynb)
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/versatile-data-kit-amld/tracking-covid-cases-deaths-example-unsolved/HEAD?labpath=setup.ipynb)
 
 You can find the **solved** MyBinder environment here:
 

@@ -13,7 +13,7 @@
 
 ## Purpose
 The purpose of this scenario is to:
-* Build upon what was already covered in scenario 1 and 2
+* Build upon what was already covered in scenario 1
 * Create a data job on the cloud
 * Load extracted data to a configured DB in an incremental fashion
 * Read clean data from a cloud database
